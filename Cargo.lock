@@ -323,6 +323,7 @@ dependencies = [
  "emulator-bus",
  "emulator-cpu",
  "emulator-periph",
+ "emulator-registers-generated",
  "emulator-types",
  "gdbstub",
  "gdbstub_arch",
@@ -374,6 +375,16 @@ dependencies = [
  "lazy_static",
  "serde",
  "serde_json",
+ "tock-registers 0.9.0 (git+https://github.com/tock/tock.git)",
+]
+
+[[package]]
+name = "emulator-registers-generated"
+version = "0.1.0"
+dependencies = [
+ "emulator-bus",
+ "emulator-types",
+ "registers-generated",
  "tock-registers 0.9.0 (git+https://github.com/tock/tock.git)",
 ]
 
@@ -828,6 +839,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "registers-generated"
+version = "0.1.0"
+dependencies = [
+ "tock-registers 0.9.0 (git+https://github.com/tock/tock.git)",
+]
+
+[[package]]
+name = "registers-generator"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "registers-systemrdl",
+]
+
+[[package]]
+name = "registers-systemrdl"
+version = "0.1.0"
+
+[[package]]
 name = "riscv"
 version = "0.1.0"
 source = "git+https://github.com/tock/tock.git?rev=b128ae817b86706c8c4e39d27fae5c54b98659f1#b128ae817b86706c8c4e39d27fae5c54b98659f1"
@@ -1143,6 +1174,10 @@ name = "xtask"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "proc-macro2",
+ "quote",
+ "registers-generator",
+ "registers-systemrdl",
  "semver",
  "walkdir",
 ]
