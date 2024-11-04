@@ -7,6 +7,7 @@ use std::{
 
 use clap::{Parser, Subcommand};
 
+mod apps_build;
 mod cargo_lock;
 mod clippy;
 mod docs;
@@ -14,6 +15,7 @@ mod format;
 mod header;
 mod precheckin;
 mod registers;
+mod rom;
 mod runtime;
 mod runtime_build;
 mod test;
@@ -35,6 +37,14 @@ enum Commands {
     },
     /// Build Runtime image
     RuntimeBuild,
+    /// Build ROM
+    RomBuild,
+    /// Build and Run ROM image
+    Rom {
+        /// Run with tracing options
+        #[arg(short, long, default_value_t = false)]
+        trace: bool,
+    },
     /// Run clippy on all targets
     Clippy,
     /// Build docs
@@ -74,6 +84,8 @@ fn main() {
     let result = match &cli.xtask {
         Commands::Runtime { trace } => runtime::runtime_run(*trace),
         Commands::RuntimeBuild => runtime_build::runtime_build(),
+        Commands::Rom { trace } => rom::rom_run(*trace),
+        Commands::RomBuild => rom::rom_build(),
         Commands::Clippy => clippy::clippy(),
         Commands::Docs => docs::docs(),
         Commands::Precheckin => precheckin::precheckin(),
