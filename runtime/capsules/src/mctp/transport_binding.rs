@@ -147,6 +147,10 @@ impl<'a> MCTPTransportBinding<'a> for MCTPI3CBinding<'a> {
 
         // Make sure there's enough space for the PEC byte
         if len == 0 || len > self.max_write_len.get() - 1 {
+            println!(
+                "MCTPI3CBinding: Invalid length. Expected: {}",
+                self.max_write_len.get() - 1
+            );
             Err((ErrorCode::SIZE, self.tx_buffer.take().unwrap()))?;
         }
 
@@ -165,6 +169,7 @@ impl<'a> MCTPTransportBinding<'a> for MCTPI3CBinding<'a> {
                         }
                     }
                 } else {
+                    println!("MCTPI3CBinding: Invalid length. Expected: {}", len + 1);
                     Err((ErrorCode::SIZE, tx_buffer))?;
                 }
             }

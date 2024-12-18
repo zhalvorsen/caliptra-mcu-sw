@@ -360,11 +360,25 @@ fn run(cli: Emulator, capture_uart_output: bool) -> io::Result<Vec<u8>> {
     if cfg!(feature = "test-mctp-ctrl-cmds") {
         i3c_controller.start();
         println!(
-            "Starting test thread for testing target {:?}",
+            "Starting test-mctp-ctrl-cmds test thread for testing target {:?}",
             i3c.get_dynamic_address().unwrap()
         );
 
         let tests = tests::mctp_ctrl_cmd::MCTPCtrlCmdTests::generate_tests();
+        i3c_socket::run_tests(
+            running.clone(),
+            cli.i3c_port.unwrap(),
+            i3c.get_dynamic_address().unwrap(),
+            tests,
+        );
+    } else if cfg!(feature = "test-mctp-send-loopback") {
+        i3c_controller.start();
+        println!(
+            "Starting loopback test thread for testing target {:?}",
+            i3c.get_dynamic_address().unwrap()
+        );
+
+        let tests = tests::mctp_loopback::generate_tests();
         i3c_socket::run_tests(
             running.clone(),
             cli.i3c_port.unwrap(),

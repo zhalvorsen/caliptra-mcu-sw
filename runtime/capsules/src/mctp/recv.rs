@@ -35,6 +35,7 @@ impl<'a> ListNode<'a, MCTPRxState<'a>> for MCTPRxState<'a> {
     }
 }
 
+#[derive(Debug)]
 struct MsgTerminus {
     msg_type: u8,
     msg_tag: u8,

@@ -1,6 +1,6 @@
 // Licensed under the Apache-2.0 license
 
-use crate::mctp::base_protocol::*;
+use crate::mctp::base_protocol::{valid_eid, MessageType, MCTP_TAG_OWNER};
 use crate::mctp::recv::MCTPRxClient;
 use crate::mctp::send::{MCTPSender, MCTPTxClient};
 use core::cell::Cell;
@@ -135,12 +135,7 @@ impl<'a> MCTPDriver<'a> {
     }
 
     fn supported_msg_type(&self, msg_type: u8) -> bool {
-        for mtype in self.msg_types.iter() {
-            if msg_type == *mtype as u8 {
-                return true;
-            }
-        }
-        false
+        self.msg_types.iter().any(|&t| t as u8 == msg_type)
     }
 
     fn validate_args(

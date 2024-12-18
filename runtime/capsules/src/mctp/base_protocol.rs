@@ -8,6 +8,8 @@
 use bitfield::bitfield;
 use zerocopy::{FromBytes, Immutable, IntoBytes};
 
+pub const MCTP_TEST_MSG_TYPE: u8 = 0x70;
+
 pub const MCTP_TAG_OWNER: u8 = 0x08;
 pub const MCTP_TAG_MASK: u8 = 0x07;
 
@@ -84,6 +86,7 @@ pub enum MessageType {
     Spdm = 5,
     SecureSpdm = 6,
     VendorDefinedPci = 0x7E,
+    TestMsgType = MCTP_TEST_MSG_TYPE as isize,
     Invalid,
 }
 
@@ -95,6 +98,7 @@ impl From<u8> for MessageType {
             5 => MessageType::Spdm,
             6 => MessageType::SecureSpdm,
             0x7E => MessageType::VendorDefinedPci,
+            MCTP_TEST_MSG_TYPE => MessageType::TestMsgType,
             _ => MessageType::Invalid,
         }
     }
