@@ -84,6 +84,8 @@ Steps 26-27, are SOC design-specific options One option is to use the Caliptra '
 26. MCU RT sets the corresponding Go bit in Caliptra register corresponding to the image component.
 27. The Go bit sets the corresponding wire that indicates the component can process the loaded image.
 
+Refer to [Streaming Boot](./firmware_update_and_streaming_boot.md) specification for detailed steps on PLDM T5 message exchanges.
+
 ## Architecture
 
 The following diagram presents the software stack architecture where the Image Loading module resides.
@@ -105,14 +107,73 @@ The APIs are presented as methods of the ImageLoader trait.
 
 /// Trait defining the Image Loading module
 pub trait ImageLoader {
-    /// Loads the specified image to a storage mapped to the AXI bus memory map.
+    /// Loads the specified SoC image to a storage mapped to the AXI bus memory map.
     ///
     /// # Parameters
     /// image_id: The unsigned integer identifier of the image.
     ///
     /// # Returns
     /// - `Ok()`: Image has been loaded and authorized succesfully.
-    /// - `Err(DynError)`: Indication of the failure to load or authorize the image.
-    async fn load_and_authorize(&self, image_id: u32) -> Result<(), DynError>;
+    /// - `Err(ErrorCode)`: Indication of the failure to load or authorize the image.
+    async fn load_and_authorize(&self, image_id: u32) -> Result<(), ErrorCode>;
+
+    /// Loads the specified image to a storage mapped to the AXI bus memory map.
+    ///
+    /// # Parameters
+    /// image_id: The unsigned integer identifier of the image.
+    /// location: Location of the image (in staging or load address)
+    ///
+    /// # Returns
+    /// - `Ok()`: Image has been authorized succesfully.
+    /// - `Err(ErrorCode)`: Indication of the failure to authorize the image.ErrorCode
+    async fn authorize(&self, image_id: u32, location: ImageLocation) -> Result<(), ErrorCode>;
+
+    /// This sends out a mailbox command retrieve the number of image components active in the device
+    /// that are defined in the SoC Manifest.
+    ///
+    /// # Returns
+    /// - `Ok(u32)`: The number of image components in the device
+    /// - `Err(DynError)`: Indication of the failure to retrieve the number of componebts
+    async fn get_component_count(&self);
+
+    /// This sends out a mailbox command to retrieve the metadata of an image.
+    ///
+    /// # Parameters
+    /// index: The index of the image as defined in the SoC Manifest
+    ///
+    /// # Returns
+    /// - `Ok(ImageMetadata)`: The image metadata
+    /// - `Err(DynError)`: An error has occurred.
+    async fn get_component_metadata(&self, index: u32);
+
+    /// This sends out a mailbox command to activate the image
+    ///
+    /// # Parameters
+    /// index: The index of the image as defined in the SoC Manifest
+    ///
+    /// # Returns
+    /// - `Ok(ImageMetadata)`: The image metadata
+    /// - `Err(DynError)`: An error has occurred.
+    async fn activate(&self, index: u32);
+
+}
+
+pub enum ImageLocation {
+   // Image is in the Load Address
+   Load,
+   // Image is in the Staging Area Address
+   Staging,
+}
+
+// The metadata of the image as described in the Soc Manifest (https://github.com/chipsalliance/caliptra-sw/blob/main-2.x/auth-manifest/README.md)
+pub struct ImageMetadata {
+	image_id: u32,
+	flags: u32,
+	load_address: u64,
+	staging_address: u64,
+	classication, u32,
+	version_number: u32,
+	version_string: [u8;32],
+	size
 }
 ```
