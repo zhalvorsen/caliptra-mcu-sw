@@ -72,6 +72,12 @@ jobs:
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
 
+
+      - name: Install the toolchain and components
+        run: |
+          rustup toolchain install nightly-2024-10-01-x86_64-unknown-linux-gnu
+          rustup component add --toolchain nightly-2024-10-01-x86_64-unknown-linux-gnu clippy rust-src llvm-tools rustfmt rustc-dev
+
       - name: Check that Cargo.lock doesn't need to be updated
           # Note: this isn't the same as checking that Cargo.lock is up to date
           # (cargo update --locked), which makes sure that every package is the
@@ -120,12 +126,6 @@ jobs:
           cargo --config "$EXTRA_CARGO_CONFIG" xtask test
           sccache --show-stats
 
-      # - name: display SPDM Validator test results
+      # - name: Display SPDM Validator test results
       #   run: |
       #     cat $GITHUB_WORKSPACE/test.log
-      #     if grep -q "fail: 0" $GITHUB_WORKSPACE/test.log; then
-      #     echo "All tests passed."
-      #     else
-      #     echo "Some tests failed."
-      #     exit 1
-      #     fi
