@@ -18,7 +18,7 @@ use crate::fatal_error;
 use crate::fuses::Otp;
 use core::fmt::Write;
 use registers_generated::{fuses::Fuses, i3c, mbox, mci, otp_ctrl, soc};
-use romtime::{HexWord, StaticRef};
+use romtime::{HexWord, Mci, StaticRef, MCI_BASE};
 use tock_registers::interfaces::{Readable, Writeable};
 
 pub const SOC_BASE: StaticRef<soc::regs::Soc> =
@@ -120,39 +120,6 @@ pub const OTP_BASE: StaticRef<otp_ctrl::regs::OtpCtrl> =
 pub const I3C_BASE: StaticRef<i3c::regs::I3c> =
     unsafe { StaticRef::new(i3c::I3C_CSR_ADDR as *const i3c::regs::I3c) };
 
-pub const MCI_BASE: StaticRef<mci::regs::Mci> =
-    unsafe { StaticRef::new(mci::MCI_REG_ADDR as *const mci::regs::Mci) };
-
-#[allow(dead_code)]
-pub const MBOX_BASE: StaticRef<mbox::regs::Mbox> =
-    unsafe { StaticRef::new(mbox::MBOX_CSR_ADDR as *const mbox::regs::Mbox) };
-
-#[allow(dead_code)]
-pub struct Mailbox {
-    registers: StaticRef<mbox::regs::Mbox>,
-}
-
-impl Mailbox {}
-
-pub struct Mci {
-    registers: StaticRef<mci::regs::Mci>,
-}
-
-impl Mci {
-    pub const fn new(registers: StaticRef<mci::regs::Mci>) -> Self {
-        Mci { registers }
-    }
-
-    pub fn caliptra_boot_go(&self) {
-        self.registers.cptra_boot_go.set(1);
-    }
-
-    #[allow(dead_code)]
-    pub fn flow_status(&self) -> u32 {
-        self.registers.fw_flow_status.get()
-    }
-}
-
 pub fn rom_start() {
     romtime::println!("[mcu-rom] Hello from ROM");
 
@@ -229,5 +196,5 @@ pub fn recovery_flow(_mci: &mut Mci) {
     //     // wait for us to get the signal to boot
     // }
     // hack until we have MCI hooked up: just look for a non-zero firmware value somewhere
-    while unsafe { core::ptr::read_volatile(0x4000_ffff as *const u32) } == 0 {}
+    while unsafe { core::ptr::read_volatile(0x4000_fff0 as *const u32) } == 0 {}
 }
