@@ -2422,7 +2422,9 @@ dependencies = [
  "libapi-caliptra",
  "libsyscall-caliptra",
  "libtock_platform",
+ "libtock_runtime",
  "libtock_unittest",
+ "libtockasync",
  "pldm-common",
 ]
 
