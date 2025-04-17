@@ -7,6 +7,7 @@ use crate::context::SpdmContext;
 use crate::error::{CommandError, CommandResult};
 use crate::protocol::common::SpdmMsgHdr;
 use crate::state::ConnectionState;
+use libapi_caliptra::crypto::hash::HashAlgoType;
 use libtock_platform::Syscalls;
 use zerocopy::{FromBytes, Immutable, IntoBytes};
 
@@ -127,7 +128,7 @@ impl<'a> Codec for GetDigestsResp<'a> {
     }
 }
 
-pub(crate) fn handle_digests<'a, S: Syscalls>(
+pub(crate) async fn handle_digests<'a, S: Syscalls>(
     ctx: &mut SpdmContext<'a, S>,
     spdm_hdr: SpdmMsgHdr,
     req_payload: &mut MessageBuf<'a>,
@@ -170,16 +171,24 @@ pub(crate) fn handle_digests<'a, S: Syscalls>(
         .get_cert_chain_slot_mask()
         .map_err(|_| ctx.generate_error_response(req_payload, ErrorCode::Unspecified, 0, None))?;
 
+    // No slots provisioned
     let slot_cnt = provisioned_mask.count_ones() as usize;
-    if slot_cnt > SPDM_MAX_CERT_CHAIN_SLOTS {
+    if slot_cnt == 0 {
         Err(ctx.generate_error_response(req_payload, ErrorCode::Unspecified, 0, None))?;
     }
 
     let mut digests: [SpdmDigest; SPDM_MAX_CERT_CHAIN_SLOTS] =
         core::array::from_fn(|_| SpdmDigest::default());
 
+    let caliptra_hash_algo: HashAlgoType = hash_algo
+        .try_into()
+        .map_err(|_| ctx.generate_error_response(req_payload, ErrorCode::Unspecified, 0, None))?;
+
     for (slot_id, digest) in digests.iter_mut().take(slot_cnt).enumerate() {
-        ctx.get_certificate_chain_digest(slot_id as u8, hash_algo, digest)
+        digest.length = caliptra_hash_algo.hash_size() as u8;
+        ctx.device_certs_manager
+            .cert_chain_digest::<S>(slot_id as u8, hash_algo, &mut digest.data)
+            .await
             .map_err(|_| {
                 ctx.generate_error_response(req_payload, ErrorCode::Unspecified, 0, None)
             })?;

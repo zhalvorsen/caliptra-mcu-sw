@@ -1,15 +1,12 @@
 // Licensed under the Apache-2.0 license
 
 use crate::cert_mgr::DeviceCertsManager;
-use crate::cert_mgr::{SpdmCertChainBaseBuffer, SpdmCertChainData};
 use crate::codec::{Codec, MessageBuf};
-use crate::commands::digests_rsp::SpdmDigest;
 use crate::commands::error_rsp::{fill_error_response, ErrorCode};
 use crate::commands::{
     algorithms_rsp, capabilities_rsp, certificate_rsp, digests_rsp, version_rsp,
 };
 use crate::error::*;
-use crate::hash_op::HashEngine;
 use crate::protocol::algorithms::*;
 use crate::protocol::common::{ReqRespCode, SpdmMsgHdr};
 use crate::protocol::version::*;
@@ -24,8 +21,7 @@ pub struct SpdmContext<'a, S: Syscalls> {
     pub(crate) state: State,
     pub(crate) local_capabilities: DeviceCapabilities,
     pub(crate) local_algorithms: LocalDeviceAlgorithms<'a>,
-    pub(crate) device_certs_manager: &'a dyn DeviceCertsManager,
-    pub(crate) hash_engine: &'a mut dyn HashEngine,
+    pub(crate) device_certs_manager: &'a DeviceCertsManager,
 }
 
 impl<'a, S: Syscalls> SpdmContext<'a, S> {
@@ -34,8 +30,7 @@ impl<'a, S: Syscalls> SpdmContext<'a, S> {
         spdm_transport: &'a mut MctpTransport<S>,
         local_capabilities: DeviceCapabilities,
         local_algorithms: LocalDeviceAlgorithms<'a>,
-        device_certs_manager: &'a dyn DeviceCertsManager,
-        hash_engine: &'a mut dyn HashEngine,
+        device_certs_manager: &'a DeviceCertsManager,
     ) -> SpdmResult<Self> {
         validate_supported_versions(supported_versions)?;
 
@@ -48,7 +43,6 @@ impl<'a, S: Syscalls> SpdmContext<'a, S> {
             local_capabilities,
             local_algorithms,
             device_certs_manager,
-            hash_engine,
         })
     }
 
@@ -59,7 +53,7 @@ impl<'a, S: Syscalls> SpdmContext<'a, S> {
             .inspect_err(|_| {})?;
 
         // Process message
-        match self.handle_request(msg_buf) {
+        match self.handle_request(msg_buf).await {
             Ok(resp_code) => {
                 self.send_response(resp_code, msg_buf)
                     .await
@@ -78,7 +72,7 @@ impl<'a, S: Syscalls> SpdmContext<'a, S> {
         Ok(())
     }
 
-    fn handle_request(&mut self, buf: &mut MessageBuf<'a>) -> CommandResult<ReqRespCode> {
+    async fn handle_request(&mut self, buf: &mut MessageBuf<'a>) -> CommandResult<ReqRespCode> {
         let req = buf;
 
         let req_msg_header: SpdmMsgHdr =
@@ -99,10 +93,11 @@ impl<'a, S: Syscalls> SpdmContext<'a, S> {
             ReqRespCode::NegotiateAlgorithms => {
                 algorithms_rsp::handle_negotiate_algorithms(self, req_msg_header, req)?
             }
-            ReqRespCode::GetDigests => digests_rsp::handle_digests(self, req_msg_header, req)?,
-
+            ReqRespCode::GetDigests => {
+                digests_rsp::handle_digests(self, req_msg_header, req).await?
+            }
             ReqRespCode::GetCertificate => {
-                certificate_rsp::handle_certificates(self, req_msg_header, req)?
+                certificate_rsp::handle_certificates(self, req_msg_header, req).await?
             }
             _ => Err((false, CommandError::UnsupportedRequest))?,
         }
@@ -162,53 +157,5 @@ impl<'a, S: Syscalls> SpdmContext<'a, S> {
 
         BaseHashAlgoType::try_from(base_hash_sel.0.trailing_zeros() as u8)
             .map_err(|_| SpdmError::InvalidParam)
-    }
-
-    pub fn get_certificate_chain_digest(
-        &mut self,
-        slot_id: u8,
-        hash_type: BaseHashAlgoType,
-        digest: &mut SpdmDigest,
-    ) -> SpdmResult<()> {
-        let mut cert_chain_data = SpdmCertChainData::default();
-        let mut root_hash = SpdmDigest::default();
-        let root_cert_len = self
-            .device_certs_manager
-            .construct_cert_chain_data(slot_id, &mut cert_chain_data)?;
-
-        // Get the hash of root_cert
-        self.hash_engine
-            .hash_all(
-                &cert_chain_data.as_ref()[..root_cert_len],
-                hash_type,
-                &mut root_hash,
-            )
-            .map_err(SpdmError::HashEngine)?;
-
-        // Construct the cert chain base buffer
-        let cert_chain_base_buf =
-            SpdmCertChainBaseBuffer::new(cert_chain_data.length as usize, root_hash.as_ref())?;
-
-        // Start the hash operation
-        self.hash_engine
-            .start(hash_type)
-            .map_err(SpdmError::HashEngine)?;
-
-        // Hash the cert chain base
-        self.hash_engine
-            .update(cert_chain_base_buf.as_ref())
-            .map_err(SpdmError::HashEngine)?;
-
-        // Hash the cert chain data
-        self.hash_engine
-            .update(cert_chain_data.as_ref())
-            .map_err(SpdmError::HashEngine)?;
-
-        // Finalize the hash operation
-        self.hash_engine
-            .finish(digest)
-            .map_err(SpdmError::HashEngine)?;
-
-        Ok(())
     }
 }

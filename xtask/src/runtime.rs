@@ -25,7 +25,7 @@ pub(crate) fn runtime_run(args: Commands) -> Result<()> {
 
     let features: Vec<&str> = features.iter().map(|x| x.as_str()).collect();
     rom_build()?;
-    runtime_build_with_apps(&features, None)?;
+    runtime_build_with_apps(&features, None, false)?;
     let rom_binary = PROJECT_ROOT
         .join("target")
         .join(TARGET)

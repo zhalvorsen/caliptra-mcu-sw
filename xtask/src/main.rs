@@ -189,7 +189,7 @@ fn main() {
         Commands::Runtime { .. } => runtime::runtime_run(cli.xtask),
         Commands::RuntimeBuild { features, output } => {
             let features: Vec<&str> = features.iter().map(|x| x.as_str()).collect();
-            mcu_builder::runtime_build_with_apps(&features, output.as_deref())
+            mcu_builder::runtime_build_with_apps(&features, output.as_deref(), false)
         }
         Commands::Rom { trace } => rom::rom_run(*trace),
         Commands::RomBuild => mcu_builder::rom_build(),

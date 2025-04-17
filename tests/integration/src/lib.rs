@@ -41,10 +41,10 @@ mod test {
         output
     }
 
-    fn compile_runtime(feature: &str) -> PathBuf {
+    fn compile_runtime(feature: &str, example_app: bool) -> PathBuf {
         let output = target_binary(&format!("runtime-{}.bin", feature));
         let output_name = format!("{}", output.display());
-        mcu_builder::runtime_build_with_apps(&[feature], Some(&output_name))
+        mcu_builder::runtime_build_with_apps(&[feature], Some(&output_name), example_app)
             .expect("Runtime build failed");
         assert!(output.exists());
         output
@@ -113,7 +113,7 @@ mod test {
 
     #[macro_export]
     macro_rules! run_test_options {
-        ($test:ident, $active:expr) => {
+        ($test:ident, $example_app:expr, $active:expr) => {
             #[test]
             fn $test() {
                 let lock = TEST_LOCK.lock().unwrap();
@@ -121,7 +121,7 @@ mod test {
 
                 println!("Compiling test firmware {}", stringify!($test));
                 let feature = stringify!($test).replace("_", "-");
-                let test_runtime = compile_runtime(&feature);
+                let test_runtime = compile_runtime(&feature, $example_app);
                 let i3c_port = "65534".to_string();
                 let test =
                     run_runtime(&feature, ROM.to_path_buf(), test_runtime, i3c_port, $active);
@@ -135,10 +135,16 @@ mod test {
     #[macro_export]
     macro_rules! run_test {
         ($test:ident) => {
-            run_test_options!($test, false);
+            run_test_options!($test, false, false);
+        };
+        ($test:ident, example_app) => {
+            run_test_options!($test, true, false);
+        };
+        ($test:ident, example_app, caliptra) => {
+            run_test_options!($test, true, true);
         };
         ($test:ident, caliptra) => {
-            run_test_options!($test, true);
+            run_test_options!($test, false, true);
         };
     }
 
@@ -147,7 +153,8 @@ mod test {
     // * add the feature to the emulator and use it to implement any behavior needed
     // * add the feature to the runtime and use it in board.rs at the end of the main function to call your test
     // These use underscores but will be converted to dashes in the feature flags
-    run_test!(test_caliptra_mailbox, caliptra);
+    run_test!(test_caliptra_mailbox, example_app, caliptra);
+    run_test!(test_caliptra_crypto, example_app, caliptra);
     run_test!(test_i3c_simple);
     run_test!(test_i3c_constant_writes);
     run_test!(test_flash_ctrl_init);
@@ -155,12 +162,12 @@ mod test {
     run_test!(test_flash_ctrl_erase_page);
     run_test!(test_flash_storage_read_write);
     run_test!(test_flash_storage_erase);
-    run_test!(test_flash_usermode);
+    run_test!(test_flash_usermode, example_app);
     run_test!(test_mctp_ctrl_cmds);
     run_test!(test_mctp_capsule_loopback);
-    run_test!(test_mctp_user_loopback);
-    run_test!(test_pldm_request_response);
-    run_test!(test_spdm_validator);
+    run_test!(test_mctp_user_loopback, example_app);
+    run_test!(test_pldm_request_response, example_app);
+    run_test!(test_spdm_validator, caliptra);
     run_test!(test_pldm_discovery);
     run_test!(test_pldm_fw_update);
     run_test!(test_pldm_fw_update_e2e);
@@ -174,7 +181,7 @@ mod test {
 
         let feature = "test-exit-immediately".to_string();
         println!("Compiling test firmware {}", &feature);
-        let test_runtime = compile_runtime(&feature);
+        let test_runtime = compile_runtime(&feature, false);
         let i3c_port = "65534".to_string();
         let test = run_runtime(&feature, ROM.to_path_buf(), test_runtime, i3c_port, true);
         assert_eq!(0, test.code().unwrap_or_default());

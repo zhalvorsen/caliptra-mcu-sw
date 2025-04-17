@@ -19,6 +19,9 @@ mod test_pldm_request_response;
 
 mod test_caliptra_mailbox;
 
+#[cfg(feature = "test-caliptra-crypto")]
+mod test_caliptra_crypto;
+
 #[cfg(target_arch = "riscv32")]
 mod riscv;
 
@@ -158,6 +161,11 @@ pub(crate) async fn async_main<S: Syscalls>() {
         test_caliptra_mailbox::test_caliptra_mailbox_bad_command::<S>().await;
         test_caliptra_mailbox::test_caliptra_mailbox_fail::<S>().await;
         romtime::test_exit(0);
+    }
+
+    #[cfg(feature = "test-caliptra-crypto")]
+    {
+        test_caliptra_crypto::test_caliptra_sha::<S>().await;
     }
 
     writeln!(console_writer, "app finished").unwrap();

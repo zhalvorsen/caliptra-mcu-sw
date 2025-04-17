@@ -135,7 +135,7 @@ impl MctpUtil {
         let mut i3c_state = I3cControllerState::Start;
         let msg_type = msg[0];
 
-        let mut retry = 10;
+        let mut retry = 20;
 
         while running.load(Ordering::Relaxed) && retry > 0 {
             match i3c_state {
@@ -155,7 +155,7 @@ impl MctpUtil {
                         i3c_state = I3cControllerState::ReceivePrivateRead;
                     } else {
                         retry -= 1;
-                        println!("MCTP_UTIL: IBI not received. Retrying...");
+                        println!("MCTP_UTIL: IBI not received. Retrying {}...", retry);
                         i3c_state = I3cControllerState::SendPrivateWrite;
                     }
                 }

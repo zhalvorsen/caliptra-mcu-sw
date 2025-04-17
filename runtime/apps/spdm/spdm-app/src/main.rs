@@ -9,10 +9,9 @@ use core::fmt::Write;
 use libsyscall_caliptra::mctp::driver_num;
 use libtock_console::{Console, ConsoleWriter};
 use libtock_platform::Syscalls;
-use spdm_lib::cert_mgr::DeviceCertsManagerImpl;
+use spdm_lib::cert_mgr::DeviceCertsManager;
 use spdm_lib::codec::MessageBuf;
 use spdm_lib::context::SpdmContext;
-use spdm_lib::hash_op::HashEngineImpl;
 use spdm_lib::protocol::*;
 use spdm_lib::transport::MctpTransport;
 
@@ -33,6 +32,9 @@ static HASH_PRIORITY_TABLE: &[BaseHashAlgoType] = &[
     BaseHashAlgoType::TpmAlgSha384,
     BaseHashAlgoType::TpmAlgSha256,
 ];
+
+// Only support slot 0 for now. Adjust this when we support multiple slots.
+pub const CERT_CHAIN_SLOT_MASK: u8 = 0x01;
 
 #[cfg(target_arch = "riscv32")]
 mod riscv;
@@ -107,8 +109,7 @@ async fn spdm_loop<S: Syscalls>(raw_buffer: &mut [u8], cw: &mut ConsoleWriter<S>
         },
     };
 
-    let device_certs_mgr = DeviceCertsManagerImpl::new();
-    let mut hash_engine = HashEngineImpl::new();
+    let device_certs_mgr = DeviceCertsManager::new(CERT_CHAIN_SLOT_MASK, CERT_CHAIN_SLOT_MASK);
 
     let mut ctx = match SpdmContext::new(
         SPDM_VERSIONS,
@@ -116,7 +117,6 @@ async fn spdm_loop<S: Syscalls>(raw_buffer: &mut [u8], cw: &mut ConsoleWriter<S>
         local_capabilities,
         local_algorithms,
         &device_certs_mgr,
-        &mut hash_engine,
     ) {
         Ok(ctx) => ctx,
         Err(e) => {

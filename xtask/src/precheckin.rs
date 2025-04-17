@@ -8,5 +8,5 @@ pub(crate) fn precheckin() -> Result<()> {
     crate::clippy::clippy()?;
     crate::header::check()?;
     crate::deps::check()?;
-    mcu_builder::runtime_build_with_apps(&[], None)
+    mcu_builder::runtime_build_with_apps(&[], None, false)
 }

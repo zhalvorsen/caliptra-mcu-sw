@@ -9,10 +9,10 @@ edition.workspace = true
 [dependencies]
 bitfield.workspace = true
 zerocopy.workspace = true
+libapi-caliptra.workspace = true
 libsyscall-caliptra.workspace = true
 libtock_platform.workspace = true
 libtock_console.workspace = true
-sha2.workspace = true
 thiserror-no-std.workspace = true
 
 [dev-dependencies]

@@ -1,15 +1,11 @@
 // Licensed under the Apache-2.0 license
 
-use crate::cert_mgr::{
-    CertChainSlotState, SpdmCertChainBuffer, SpdmCertChainData, SPDM_MAX_CERT_CHAIN_SLOTS,
-};
+use crate::cert_mgr::{CertChainSlotState, SPDM_MAX_CERT_CHAIN_SLOTS};
 use crate::codec::{Codec, CodecError, CodecResult, CommonCodec, DataKind, MessageBuf};
-use crate::commands::digests_rsp::SpdmDigest;
 use crate::commands::error_rsp::ErrorCode;
 use crate::config::MAX_SPDM_CERT_PORTION_LEN;
 use crate::context::SpdmContext;
 use crate::error::{CommandError, CommandResult, SpdmError, SpdmResult};
-use crate::protocol::algorithms::BaseHashAlgoType;
 use crate::protocol::common::SpdmMsgHdr;
 use crate::protocol::version::SpdmVersion;
 use crate::state::ConnectionState;
@@ -109,7 +105,7 @@ impl<'a> Codec for GetCertificateResp<'a> {
     }
 }
 
-pub(crate) fn handle_certificates<'a, S: Syscalls>(
+pub(crate) async fn handle_certificates<'a, S: Syscalls>(
     ctx: &mut SpdmContext<'a, S>,
     spdm_hdr: SpdmMsgHdr,
     req_payload: &mut MessageBuf<'a>,
@@ -153,7 +149,10 @@ pub(crate) fn handle_certificates<'a, S: Syscalls>(
         .get_select_hash_algo()
         .map_err(|_| ctx.generate_error_response(req_payload, ErrorCode::Unspecified, 0, None))?;
 
-    let cert_chain_buffer = construct_cert_chain_buffer(ctx, hash_type, slot_id)
+    let cert_chain_buffer = ctx
+        .device_certs_manager
+        .construct_cert_chain_buffer::<S>(hash_type, slot_id)
+        .await
         .map_err(|_| ctx.generate_error_response(req_payload, ErrorCode::Unspecified, 0, None))?;
 
     let mut offset = req.offset;
@@ -227,34 +226,6 @@ pub(crate) fn handle_certificates<'a, S: Syscalls>(
     }
 
     Ok(())
-}
-
-fn construct_cert_chain_buffer<S: Syscalls>(
-    ctx: &mut SpdmContext<S>,
-    hash_type: BaseHashAlgoType,
-    slot_id: u8,
-) -> SpdmResult<SpdmCertChainBuffer> {
-    let mut cert_chain_data = SpdmCertChainData::default();
-    let mut root_hash = SpdmDigest::default();
-    let root_cert_len = ctx
-        .device_certs_manager
-        .construct_cert_chain_data(slot_id, &mut cert_chain_data)
-        .map_err(SpdmError::CertMgr)?;
-
-    // Get the hash of root_cert
-    ctx.hash_engine
-        .hash_all(
-            &cert_chain_data.as_ref()[..root_cert_len],
-            hash_type,
-            &mut root_hash,
-        )
-        .map_err(SpdmError::HashEngine)?;
-
-    // Construct the cert chain buffer
-    let cert_chain_buffer = SpdmCertChainBuffer::new(cert_chain_data.as_ref(), root_hash.as_ref())
-        .map_err(|_| SpdmError::InvalidParam)?;
-
-    Ok(cert_chain_buffer)
 }
 
 fn fill_certificate_response<S: Syscalls>(

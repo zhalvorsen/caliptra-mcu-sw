@@ -1464,6 +1464,7 @@ dependencies = [
  "critical-section",
  "embassy-executor",
  "embedded-alloc",
+ "libapi-caliptra",
  "libsyscall-caliptra",
  "libtock",
  "libtock_alarm",
@@ -1873,10 +1874,13 @@ checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 name = "libapi-caliptra"
 version = "0.1.0"
 dependencies = [
+ "caliptra-api",
+ "caliptra-error",
  "futures",
  "libsyscall-caliptra",
  "libtock_platform",
  "libtock_unittest",
+ "thiserror-no-std",
  "zerocopy 0.8.23",
 ]
 
@@ -2970,11 +2974,11 @@ name = "spdm-lib"
 version = "0.1.0"
 dependencies = [
  "bitfield",
+ "libapi-caliptra",
  "libsyscall-caliptra",
  "libtock_console",
  "libtock_platform",
  "rand",
- "sha2",
  "thiserror-no-std",
  "zerocopy 0.8.23",
 ]

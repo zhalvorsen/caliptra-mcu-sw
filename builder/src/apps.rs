@@ -8,14 +8,15 @@ use std::process::Command;
 
 pub const APPS: &[App] = &[
     App {
+        // Make sure this is the first app in the list
         name: "example-app",
         permissions: vec![],
-        minimum_ram: 20 * 1024,
+        minimum_ram: 24 * 1024,
     },
     App {
         name: "spdm-app",
         permissions: vec![],
-        minimum_ram: 28 * 1024,
+        minimum_ram: 52 * 1024,
     },
     App {
         name: "pldm-app",
@@ -48,17 +49,33 @@ pub const BASE_PERMISSIONS: &[(u32, u32)] = &[
     (8, 3), // Low-level debug
 ];
 
-// creates a single flat binary with all the apps built with TBF headers
-pub fn apps_build_flat_tbf(start: usize, ram_start: usize, features: &[&str]) -> Result<Vec<u8>> {
+// Generates a single flat binary containing the apps built with their TBF headers.
+// If `example_app` is true, only the example app is included; otherwise, all other apps are included.
+pub fn apps_build_flat_tbf(
+    start: usize,
+    ram_start: usize,
+    features: &[&str],
+    example_app: bool,
+) -> Result<Vec<u8>> {
     let mut bin = vec![];
     let mut offset = start;
     let mut ram_start = ram_start;
     for app in APPS.iter() {
+        if app.name == "example-app" && !example_app {
+            continue;
+        }
         println!("Building TBF for app {}", app.name);
         let app_bin = app_build_tbf(app, offset, ram_start, app.minimum_ram as usize, features)?;
         bin.extend_from_slice(&app_bin);
         offset += app_bin.len();
         ram_start += app.minimum_ram as usize;
+
+        if app.name == "example-app" && example_app {
+            // example app is always the first app
+            // and we do not want to build any more apps after it
+            // so we can just break out of the loop
+            break;
+        }
     }
     // align to 4-byte boundary for PMP
     while bin.len() % 4 != 0 {
@@ -160,7 +177,7 @@ fn app_build(
 /* Licensed under the Apache-2.0 license */
 TBF_HEADER_SIZE = 0x{:x};
 FLASH_START = 0x{:x};
-FLASH_LENGTH = 0x16800;
+FLASH_LENGTH = 0x17000;
 RAM_START = 0x{:x};
 RAM_LENGTH = 0x{:x};
 INCLUDE runtime/apps/app_layout.ld",

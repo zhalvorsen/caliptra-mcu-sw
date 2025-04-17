@@ -52,6 +52,7 @@ uuid.workspace = true
 
 [features]
 default = []
+test-caliptra-crypto = []
 test-caliptra-mailbox = []
 test-i3c-simple = []
 test-i3c-constant-writes = ["emulator-periph/test-i3c-constant-writes"]
@@ -70,3 +71,4 @@ test-pldm-request-response = []
 test-pldm-discovery = []
 test-pldm-fw-update = []
 test-pldm-fw-update-e2e = []
+
