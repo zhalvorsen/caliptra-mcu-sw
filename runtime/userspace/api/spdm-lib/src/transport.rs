@@ -123,7 +123,7 @@ impl SpdmTransport for MctpTransport {
             .map_err(|_| TransportError::BufferTooSmall)?;
         let (rsp_len, _msg_info) = if let Some(tag) = self.cur_req_ctx {
             self.mctp
-                .receive_response(rsp_buf, tag)
+                .receive_response(rsp_buf, tag, 0)
                 .await
                 .map_err(|_| TransportError::ReceiveError)
         } else {
