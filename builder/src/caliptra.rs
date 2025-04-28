@@ -108,6 +108,7 @@ impl CaliptraBuilder {
             fw_id: 2,
             flags: flags.0,
             digest,
+            ..Default::default()
         }];
         let manifest = Self::create_auth_manifest_with_metadata(metadata);
 

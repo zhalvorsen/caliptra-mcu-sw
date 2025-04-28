@@ -133,7 +133,7 @@ impl<S: Syscalls> DMA<S> {
 // -----------------------------------------------------------------------------
 
 // Driver number for the DMA interface
-pub const DMA_DRIVER_NUM: u32 = 0x8000_0008;
+pub const DMA_DRIVER_NUM: u32 = 0x9000_0000;
 
 /// Command IDs used by the DMA interface.
 mod dma_cmd {

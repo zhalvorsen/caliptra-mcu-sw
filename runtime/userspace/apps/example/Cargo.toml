@@ -36,6 +36,7 @@ embedded-alloc.workspace = true
 default = []
 test-caliptra-crypto = []
 test-caliptra-mailbox = []
+test-dma = []
 test-exit-immediately = []
 test-i3c-simple = []
 test-i3c-constant-writes = []

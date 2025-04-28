@@ -4,100 +4,100 @@
 //
 #[allow(unused_imports)]
 use tock_registers::interfaces::{Readable, Writeable};
-pub trait MainFlashPeripheral {
+pub trait DmaPeripheral {
     fn set_dma_ram(&mut self, _ram: std::rc::Rc<std::cell::RefCell<emulator_bus::Ram>>) {}
     fn poll(&mut self) {}
     fn warm_reset(&mut self) {}
     fn update_reset(&mut self) {}
-    fn read_fl_interrupt_state(
+    fn read_dma_interrupt_state(
         &mut self,
     ) -> emulator_bus::ReadWriteRegister<
         u32,
-        registers_generated::main_flash_ctrl::bits::FlInterruptState::Register,
+        registers_generated::dma_ctrl::bits::DmaInterruptState::Register,
     > {
         emulator_bus::ReadWriteRegister::new(0)
     }
-    fn write_fl_interrupt_state(
+    fn write_dma_interrupt_state(
         &mut self,
         _val: emulator_bus::ReadWriteRegister<
             u32,
-            registers_generated::main_flash_ctrl::bits::FlInterruptState::Register,
+            registers_generated::dma_ctrl::bits::DmaInterruptState::Register,
         >,
     ) {
     }
-    fn read_fl_interrupt_enable(
+    fn read_dma_interrupt_enable(
         &mut self,
     ) -> emulator_bus::ReadWriteRegister<
         u32,
-        registers_generated::main_flash_ctrl::bits::FlInterruptEnable::Register,
+        registers_generated::dma_ctrl::bits::DmaInterruptEnable::Register,
     > {
         emulator_bus::ReadWriteRegister::new(0)
     }
-    fn write_fl_interrupt_enable(
+    fn write_dma_interrupt_enable(
         &mut self,
         _val: emulator_bus::ReadWriteRegister<
             u32,
-            registers_generated::main_flash_ctrl::bits::FlInterruptEnable::Register,
+            registers_generated::dma_ctrl::bits::DmaInterruptEnable::Register,
         >,
     ) {
     }
-    fn read_page_size(&mut self) -> caliptra_emu_types::RvData {
+    fn read_xfer_size(&mut self) -> caliptra_emu_types::RvData {
         0
     }
-    fn write_page_size(&mut self, _val: caliptra_emu_types::RvData) {}
-    fn read_page_num(&mut self) -> caliptra_emu_types::RvData {
+    fn write_xfer_size(&mut self, _val: caliptra_emu_types::RvData) {}
+    fn read_source_addr_high(&mut self) -> caliptra_emu_types::RvData {
         0
     }
-    fn write_page_num(&mut self, _val: caliptra_emu_types::RvData) {}
-    fn read_page_addr(&mut self) -> caliptra_emu_types::RvData {
+    fn write_source_addr_high(&mut self, _val: caliptra_emu_types::RvData) {}
+    fn read_source_addr_lower(&mut self) -> caliptra_emu_types::RvData {
         0
     }
-    fn write_page_addr(&mut self, _val: caliptra_emu_types::RvData) {}
-    fn read_fl_control(
+    fn write_source_addr_lower(&mut self, _val: caliptra_emu_types::RvData) {}
+    fn read_dest_addr_high(&mut self) -> caliptra_emu_types::RvData {
+        0
+    }
+    fn write_dest_addr_high(&mut self, _val: caliptra_emu_types::RvData) {}
+    fn read_dest_addr_lower(&mut self) -> caliptra_emu_types::RvData {
+        0
+    }
+    fn write_dest_addr_lower(&mut self, _val: caliptra_emu_types::RvData) {}
+    fn read_dma_control(
         &mut self,
     ) -> emulator_bus::ReadWriteRegister<
         u32,
-        registers_generated::main_flash_ctrl::bits::FlControl::Register,
+        registers_generated::dma_ctrl::bits::DmaControl::Register,
     > {
         emulator_bus::ReadWriteRegister::new(0)
     }
-    fn write_fl_control(
+    fn write_dma_control(
         &mut self,
         _val: emulator_bus::ReadWriteRegister<
             u32,
-            registers_generated::main_flash_ctrl::bits::FlControl::Register,
+            registers_generated::dma_ctrl::bits::DmaControl::Register,
         >,
     ) {
     }
-    fn read_op_status(
+    fn read_dma_op_status(
         &mut self,
     ) -> emulator_bus::ReadWriteRegister<
         u32,
-        registers_generated::main_flash_ctrl::bits::OpStatus::Register,
+        registers_generated::dma_ctrl::bits::DmaOpStatus::Register,
     > {
         emulator_bus::ReadWriteRegister::new(0)
     }
-    fn write_op_status(
+    fn write_dma_op_status(
         &mut self,
         _val: emulator_bus::ReadWriteRegister<
             u32,
-            registers_generated::main_flash_ctrl::bits::OpStatus::Register,
+            registers_generated::dma_ctrl::bits::DmaOpStatus::Register,
         >,
     ) {
-    }
-    fn read_ctrl_regwen(
-        &mut self,
-    ) -> emulator_bus::ReadWriteRegister<
-        u32,
-        registers_generated::main_flash_ctrl::bits::CtrlRegwen::Register,
-    > {
-        emulator_bus::ReadWriteRegister::new(0)
     }
 }
-pub struct MainFlashBus {
-    pub periph: Box<dyn MainFlashPeripheral>,
+pub struct DmaBus {
+    pub periph: Box<dyn DmaPeripheral>,
 }
-impl emulator_bus::Bus for MainFlashBus {
+impl emulator_bus::Bus for DmaBus {
     fn read(
         &mut self,
         size: caliptra_emu_types::RvSize,
@@ -108,22 +108,21 @@ impl emulator_bus::Bus for MainFlashBus {
         }
         match addr {
             0..4 => Ok(caliptra_emu_types::RvData::from(
-                self.periph.read_fl_interrupt_state().reg.get(),
+                self.periph.read_dma_interrupt_state().reg.get(),
             )),
             4..8 => Ok(caliptra_emu_types::RvData::from(
-                self.periph.read_fl_interrupt_enable().reg.get(),
+                self.periph.read_dma_interrupt_enable().reg.get(),
             )),
-            8..0xc => Ok(self.periph.read_page_size()),
-            0xc..0x10 => Ok(self.periph.read_page_num()),
-            0x10..0x14 => Ok(self.periph.read_page_addr()),
-            0x14..0x18 => Ok(caliptra_emu_types::RvData::from(
-                self.periph.read_fl_control().reg.get(),
-            )),
-            0x18..0x1c => Ok(caliptra_emu_types::RvData::from(
-                self.periph.read_op_status().reg.get(),
-            )),
+            8..0xc => Ok(self.periph.read_xfer_size()),
+            0xc..0x10 => Ok(self.periph.read_source_addr_high()),
+            0x10..0x14 => Ok(self.periph.read_source_addr_lower()),
+            0x14..0x18 => Ok(self.periph.read_dest_addr_high()),
+            0x18..0x1c => Ok(self.periph.read_dest_addr_lower()),
             0x1c..0x20 => Ok(caliptra_emu_types::RvData::from(
-                self.periph.read_ctrl_regwen().reg.get(),
+                self.periph.read_dma_control().reg.get(),
+            )),
+            0x20..0x24 => Ok(caliptra_emu_types::RvData::from(
+                self.periph.read_dma_op_status().reg.get(),
             )),
             _ => Err(emulator_bus::BusError::LoadAccessFault),
         }
@@ -140,34 +139,42 @@ impl emulator_bus::Bus for MainFlashBus {
         match addr {
             0..4 => {
                 self.periph
-                    .write_fl_interrupt_state(emulator_bus::ReadWriteRegister::new(val));
+                    .write_dma_interrupt_state(emulator_bus::ReadWriteRegister::new(val));
                 Ok(())
             }
             4..8 => {
                 self.periph
-                    .write_fl_interrupt_enable(emulator_bus::ReadWriteRegister::new(val));
+                    .write_dma_interrupt_enable(emulator_bus::ReadWriteRegister::new(val));
                 Ok(())
             }
             8..0xc => {
-                self.periph.write_page_size(val);
+                self.periph.write_xfer_size(val);
                 Ok(())
             }
             0xc..0x10 => {
-                self.periph.write_page_num(val);
+                self.periph.write_source_addr_high(val);
                 Ok(())
             }
             0x10..0x14 => {
-                self.periph.write_page_addr(val);
+                self.periph.write_source_addr_lower(val);
                 Ok(())
             }
             0x14..0x18 => {
-                self.periph
-                    .write_fl_control(emulator_bus::ReadWriteRegister::new(val));
+                self.periph.write_dest_addr_high(val);
                 Ok(())
             }
             0x18..0x1c => {
+                self.periph.write_dest_addr_lower(val);
+                Ok(())
+            }
+            0x1c..0x20 => {
                 self.periph
-                    .write_op_status(emulator_bus::ReadWriteRegister::new(val));
+                    .write_dma_control(emulator_bus::ReadWriteRegister::new(val));
+                Ok(())
+            }
+            0x20..0x24 => {
+                self.periph
+                    .write_dma_op_status(emulator_bus::ReadWriteRegister::new(val));
                 Ok(())
             }
             _ => Err(emulator_bus::BusError::StoreAccessFault),

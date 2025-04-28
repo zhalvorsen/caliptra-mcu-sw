@@ -155,6 +155,7 @@ mod test {
     // These use underscores but will be converted to dashes in the feature flags
     run_test!(test_caliptra_mailbox, example_app, caliptra);
     run_test!(test_caliptra_crypto, example_app, caliptra);
+    run_test!(test_dma, example_app);
     run_test!(test_i3c_simple);
     run_test!(test_i3c_constant_writes);
     run_test!(test_flash_ctrl_init);

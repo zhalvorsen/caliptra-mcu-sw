@@ -1,0 +1,13 @@
+# Licensed under the Apache-2.0 license
+
+[package]
+name = "capsules-emulator"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+bitfield.workspace = true
+dma-driver.workspace = true
+kernel.workspace = true
+registers-generated.workspace = true

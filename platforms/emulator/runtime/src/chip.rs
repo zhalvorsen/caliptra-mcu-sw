@@ -35,6 +35,8 @@ pub const MAIN_FLASH_CTRL_ERROR_IRQ: u8 = 0x13;
 pub const MAIN_FLASH_CTRL_EVENT_IRQ: u8 = 0x14;
 pub const RECOVERY_FLASH_CTRL_EVENT_IRQ: u8 = 0x15;
 pub const RECOVERY_FLASH_CTRL_ERROR_IRQ: u8 = 0x16;
+pub const DMA_EVENT_IRQ: u8 = 0x17;
+pub const DMA_ERROR_IRQ: u8 = 0x18;
 
 pub struct VeeR<'a, I: InterruptService + 'a> {
     userspace_kernel_boundary: SysCall,
@@ -49,6 +51,7 @@ pub struct VeeRDefaultPeripherals<'a> {
     pub i3c: i3c_driver::core::I3CCore<'a, InternalTimers<'a>>,
     pub main_flash_ctrl: flash_driver::flash_ctrl::EmulatedFlashCtrl<'a>,
     pub recovery_flash_ctrl: flash_driver::flash_ctrl::EmulatedFlashCtrl<'a>,
+    pub dma: dma_driver::dma_ctrl::EmulatedDmaCtrl<'a>,
 }
 
 impl<'a> VeeRDefaultPeripherals<'a> {
@@ -62,6 +65,7 @@ impl<'a> VeeRDefaultPeripherals<'a> {
             recovery_flash_ctrl: flash_driver::flash_ctrl::EmulatedFlashCtrl::new(
                 flash_driver::flash_ctrl::RECOVERY_FLASH_CTRL_BASE,
             ),
+            dma: dma_driver::dma_ctrl::EmulatedDmaCtrl::new(dma_driver::dma_ctrl::DMA_CTRL_BASE),
         }
     }
 
@@ -71,6 +75,7 @@ impl<'a> VeeRDefaultPeripherals<'a> {
         self.i3c.init();
         self.main_flash_ctrl.init();
         self.recovery_flash_ctrl.init();
+        self.dma.init();
     }
 }
 
@@ -94,6 +99,9 @@ impl<'a> InterruptService for VeeRDefaultPeripherals<'a> {
             || interrupt == RECOVERY_FLASH_CTRL_EVENT_IRQ as u32
         {
             self.recovery_flash_ctrl.handle_interrupt();
+            return true;
+        } else if interrupt == DMA_ERROR_IRQ as u32 || interrupt == DMA_EVENT_IRQ as u32 {
+            self.dma.handle_interrupt();
             return true;
         }
         debug!("Unhandled interrupt {}", interrupt);

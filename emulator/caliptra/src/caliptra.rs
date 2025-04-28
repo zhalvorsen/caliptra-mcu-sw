@@ -230,7 +230,7 @@ pub fn start_caliptra(
                 download_idev_id_csr(mailbox, log_dir.clone(), cptra_dbg_manuf_service_reg);
             },
         ),
-        active_mode: args.active_mode,
+        subsystem_mode: args.active_mode,
         ..Default::default()
     };
 

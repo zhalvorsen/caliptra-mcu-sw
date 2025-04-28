@@ -132,7 +132,7 @@ impl SyscallDriver for FakeDMADriver {
 }
 
 // DMA constants
-pub const DMA_DRIVER_NUM: u32 = 0x8000_0008;
+pub const DMA_DRIVER_NUM: u32 = 0x9000_0000;
 
 mod dma_cmd {
     pub const SET_BYTE_XFER_COUNT: u32 = 0;

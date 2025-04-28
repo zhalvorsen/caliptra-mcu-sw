@@ -4,8 +4,6 @@
 use kernel::ErrorCode;
 
 /// This trait provides the interfaces for managing DMA transfers.
-/// The full description of the DMA interface can be found in the Caliptra Subsystem Specification:
-/// https://github.com/chipsalliance/caliptra-ss/blob/main/docs/Caliptra%202.0%20Subsystem%20Specification%201.pdf
 pub trait DMA {
     /// Configure the DMA transfer with 64-bit source and destination addresses.
     ///
@@ -27,7 +25,12 @@ pub trait DMA {
     ) -> Result<(), ErrorCode>;
 
     /// Start the configured DMA transfer.
-    fn start_transfer(&self, read_route: DmaRoute, write_route: DmaRoute, fixed_addr: bool) -> Result<(), ErrorCode>;
+    fn start_transfer(
+        &self,
+        read_route: DmaRoute,
+        write_route: DmaRoute,
+        fixed_addr: bool,
+    ) -> Result<(), ErrorCode>;
 
     /// Poll the DMA status for transfer progress or completion.
     fn poll_status(&self) -> Result<DMAStatus, DMAError>;
@@ -52,36 +55,33 @@ pub trait DMA {
 }
 
 /// DMA Route configuration for Read/Write routes.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum DmaRoute {
     Disabled,
-    AxiToMailbox,
-    AxiToAHB,
     AxiToAxi,
-    AHBToAxi,
 }
 
 /// Represents the current status of the DMA transfer.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum DMAStatus {
-    TxnDone,           // Transaction complete
-    RdFifoNotEmpty,    // Read FIFO has data
-    RdFifoFull,        // Read FIFO is full
-    WrFifoNotFull,     // Write FIFO has room for more data
-    WrFifoEmpty,       // Write FIFO is empty
+    TxnDone,        // Transaction complete
+    RdFifoNotEmpty, // Read FIFO has data
+    RdFifoFull,     // Read FIFO is full
+    WrFifoNotFull,  // Write FIFO has room for more data
+    WrFifoEmpty,    // Write FIFO is empty
 }
 
 /// Represents possible DMA errors.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum DMAError {
-    CommandError,       // General command error
-    AxiReadError,       // AXI Read error
-    AxiWriteError,      // AXI Write error
-    MailboxNotLocked,   // Mailbox lock not acquired
-    RdFifoOverflow,     // Data overflow in Read FIFO
-    RdFifoUnderflow,    // Data underflow in Read FIFO
-    WrFifoOverflow,     // Data overflow in Write FIFO
-    WrFifoUnderflow,    // Data underflow in Write FIFO
+    CommandError,     // General command error
+    AxiReadError,     // AXI Read error
+    AxiWriteError,    // AXI Write error
+    MailboxNotLocked, // Mailbox lock not acquired
+    RdFifoOverflow,   // Data overflow in Read FIFO
+    RdFifoUnderflow,  // Data underflow in Read FIFO
+    WrFifoOverflow,   // Data overflow in Write FIFO
+    WrFifoUnderflow,  // Data underflow in Write FIFO
 }
 
 /// A client trait for handling asynchronous DMA transfer events.

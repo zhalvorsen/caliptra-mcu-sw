@@ -2,6 +2,7 @@
 
 //! Components for the Caliptra MCU runtime.
 
+pub mod dma;
 pub mod flash_partition;
 pub mod mailbox;
 pub mod mctp_driver;

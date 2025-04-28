@@ -33,6 +33,7 @@ use emulator_cpu::{Cpu, Pic, RvInstr, StepAction};
 use emulator_periph::{
     CaliptraRootBus, CaliptraRootBusArgs, DummyFlashCtrl, I3c, I3cController, Mci, Otp,
 };
+use emulator_registers_generated::dma::DmaPeripheral;
 use emulator_registers_generated::root_bus::AutoRootBus;
 use gdb::gdb_state;
 use gdb::gdb_target::GdbTarget;
@@ -542,6 +543,16 @@ fn run(cli: Emulator, capture_uart_output: bool) -> io::Result<Vec<u8>> {
         CaliptraRootBus::RECOVERY_FLASH_CTRL_EVENT_IRQ,
     );
 
+    let mut dma_ctrl = emulator_periph::DummyDmaCtrl::new(
+        &clock.clone(),
+        pic.register_irq(CaliptraRootBus::DMA_ERROR_IRQ),
+        pic.register_irq(CaliptraRootBus::DMA_EVENT_IRQ),
+        Some(root_bus.external_test_sram.clone()),
+    )
+    .unwrap();
+
+    emulator_periph::DummyDmaCtrl::set_dma_ram(&mut dma_ctrl, dma_ram.clone());
+
     let delegates: Vec<Box<dyn Bus>> = vec![
         Box::new(root_bus),
         Box::new(BusConverter::new(Box::new(soc_to_caliptra))),
@@ -564,6 +575,7 @@ fn run(cli: Emulator, capture_uart_output: bool) -> io::Result<Vec<u8>> {
         Some(Box::new(main_flash_controller)),
         Some(Box::new(recovery_flash_controller)),
         Some(Box::new(mci)),
+        Some(Box::new(dma_ctrl)),
         None,
         None,
         None,

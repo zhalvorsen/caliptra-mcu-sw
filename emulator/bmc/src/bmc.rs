@@ -49,6 +49,9 @@ impl Bmc {
                 Device::MCU => {
                     self.events_to_mcu.send(event).unwrap();
                 }
+                Device::ExternalTestSram => {
+                    self.events_to_mcu.send(event).unwrap();
+                }
                 _ => {}
             }
         }

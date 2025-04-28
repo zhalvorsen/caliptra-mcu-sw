@@ -22,6 +22,9 @@ mod test_caliptra_mailbox;
 #[cfg(feature = "test-caliptra-crypto")]
 mod test_caliptra_crypto;
 
+#[cfg(feature = "test-dma")]
+mod test_dma;
+
 #[cfg(target_arch = "riscv32")]
 mod riscv;
 
@@ -166,6 +169,12 @@ pub(crate) async fn async_main<S: Syscalls>() {
     #[cfg(feature = "test-caliptra-crypto")]
     {
         test_caliptra_crypto::test_caliptra_sha().await;
+    }
+    #[cfg(feature = "test-dma")]
+    {
+        test_dma::test_dma_xfer_local_to_local().await;
+        test_dma::test_dma_xfer_local_to_external().await;
+        romtime::test_exit(0);
     }
 
     writeln!(console_writer, "app finished").unwrap();

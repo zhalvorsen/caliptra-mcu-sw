@@ -29,6 +29,7 @@ tempfile.workspace = true
 
 [features]
 default = []
+test-dma = []
 test-i3c-constant-writes = []
 test-flash-ctrl-init = []
 test-flash-ctrl-read-write-page = []
