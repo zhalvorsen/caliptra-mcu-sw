@@ -1,16 +1,15 @@
 # Licensed under the Apache-2.0 license
 
-name: Build and Test
+name: SPDM Validator Tests
 
 on:
-  push:
-    branches: ["main"]
-  pull_request:
-  workflow_call:
+  schedule:
+    - cron: '0 0 * * *'
+  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 jobs:
-  build_and_test:
+  spdm_validator_tests:
     runs-on: ubuntu-24.04
 
     env:
@@ -22,9 +21,6 @@ jobs:
 
       # Change this to a new random value if you suspect the cache is corrupted
       SCCACHE_C_CUSTOM_CACHE_BUSTER: 8b42a6e70ec4
-
-      # Compiler warnings should fail to compile
-      EXTRA_CARGO_CONFIG: "target.'cfg(all())'.rustflags = [\"-Dwarnings\"]"
 
     steps:
       - name: Checkout repo
@@ -41,6 +37,13 @@ jobs:
           sudo apt-get update -qy && \
           sudo apt-get install -qy build-essential curl gcc-multilib gcc-riscv64-unknown-elf git rustup &&
           rustup toolchain install -c clippy,rust-src,llvm-tools,rustfmt,rustc-dev
+
+      - name: Install cmake 3.x
+        run: |
+          wget https://github.com/Kitware/CMake/releases/download/v3.31.6/cmake-3.31.6-linux-x86_64.tar.gz &&
+          mkdir -p /opt/cmake &&
+          tar xvzf cmake-3.31.6-linux-x86_64.tar.gz -C /opt/cmake --strip-components=1 &&
+          echo "/opt/cmake/bin" >> $GITHUB_PATH
 
       - name: Restore sccache binary
         uses: actions/cache/restore@v3
@@ -71,30 +74,32 @@ jobs:
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
 
-      - name: Check that Cargo.lock doesn't need to be updated
-          # Note: this isn't the same as checking that Cargo.lock is up to date
-          # (cargo update --locked), which makes sure that every package is the
-          # latest published version. This is just ensuring that every
-          # dependency has an entry in Cargo.lock that is compatible with the
-          # version requirements in all Cargo.toml files.
-        run: |
-          # This works because cargo tree requires a Cargo.lock with no required updates
-          cargo tree --locked > /dev/null || (
-            echo "Please include required changes to Cargo.lock in your pull request"
-            # Without the --locked flag, cargo will do the minimal possible update to Cargo.lock
-            cargo tree > /dev/null 2> /dev/null
-            # Print out the differences to ease debugging
-            git diff Cargo.lock
-            exit 1
-          )
+      - name: Checkout spdm-emu repository
+        uses: actions/checkout@v4
+        with:
+          repository: parvathib/spdm-emu
+          ref: pbhogaraju/get-measurements
+          path: spdm-emu
+          submodules: recursive
 
-      - name: Run precheckin
+      - name: Build spdm-emu
         run: |
-          cargo --config "$EXTRA_CARGO_CONFIG" xtask precheckin
-          sccache --show-stats
+          pushd spdm-emu
+          git submodule update --init --recursive
+          mkdir build
+          pushd build
+          cmake -DARCH=x64 -DTOOLCHAIN=GCC -DTARGET=Debug -DCRYPTO=openssl ..
+          make copy_sample_key
+          make
+          popd
+          popd
 
-      - name: Run all tests
+      - name: Run SPDM validator test tests
         run: |
           export SPDM_VALIDATOR_DIR=$GITHUB_WORKSPACE/spdm-emu/build/bin
-          cargo --config "$EXTRA_CARGO_CONFIG" xtask test
+          cargo t -p tests-integration -- --test test_spdm_validator --nocapture  --include-ignored
           sccache --show-stats
+
+      - name: Display SPDM Validator test results
+        run: |
+          cat $GITHUB_WORKSPACE/test.log
