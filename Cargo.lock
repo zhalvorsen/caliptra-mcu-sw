@@ -1312,6 +1312,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "doe-transport"
+version = "0.1.0"
+dependencies = [
+ "kernel",
+]
+
+[[package]]
 name = "dpe"
 version = "0.1.0"
 source = "git+https://github.com/chipsalliance/caliptra-sw?rev=7964bbb612126ef9a5f5972b5c68c80534f7423b#7964bbb612126ef9a5f5972b5c68c80534f7423b"
