@@ -149,6 +149,7 @@ impl Test {
             self.cur_req_msg
         );
         self.mctp_test_state = MctpTestState::Start;
+        let mut cmd_retry_count = 0;
 
         while EMULATOR_RUNNING.load(Ordering::Relaxed) {
             match self.mctp_test_state {
@@ -176,14 +177,14 @@ impl Test {
                         println!("SPDM_SERVER: response received, marking finished");
                         self.cur_resp_msg = resp_msg;
                         self.mctp_test_state = MctpTestState::Finish;
-                    } else if self.cmd_retry_count == 0 {
+                    } else if cmd_retry_count == self.cmd_retry_count {
                         println!("SPDM_SERVER: No response received, marking finished");
                         self.mctp_test_state = MctpTestState::Finish;
                     } else {
-                        self.cmd_retry_count -= 1;
+                        cmd_retry_count += 1;
                         println!(
                             "SPDM_SERVER: No response received, retrying ({})",
-                            self.cmd_retry_count
+                            cmd_retry_count
                         );
                         self.mctp_test_state = MctpTestState::SendReq;
                     }
