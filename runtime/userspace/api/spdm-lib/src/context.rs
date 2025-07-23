@@ -233,8 +233,10 @@ impl<'a> SpdmContext<'a> {
         msg_buf: &mut MessageBuf<'_>,
         transcript_context: TranscriptContext,
     ) -> CommandResult<()> {
+        let data_offset = msg_buf.data_offset();
+
         let msg = msg_buf
-            .message_data()
+            .message_slice(data_offset)
             .map_err(|e| (false, CommandError::Codec(e)))?;
 
         self.transcript_mgr

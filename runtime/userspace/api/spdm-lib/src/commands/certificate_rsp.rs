@@ -225,12 +225,13 @@ async fn generate_certificate_response<'a>(
         }
     }
 
-    rsp.push_data(payload_len)
-        .map_err(|e| (false, CommandError::Codec(e)))?;
-
     // Append the response message to the M1 transcript
     ctx.append_message_to_transcript(rsp, TranscriptContext::M1)
-        .await
+        .await?;
+
+    rsp.push_data(payload_len)
+        .map_err(|e| (false, CommandError::Codec(e)))?;
+    Ok(())
 }
 
 async fn process_get_certificate<'a>(

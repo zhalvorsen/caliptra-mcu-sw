@@ -47,7 +47,7 @@ bitfield! {
 
 impl DoeHeader<[u8; DOE_HEADER_SIZE]> {
     pub fn new(data_object_type: DataObjectType, length: u32) -> Self {
-        let len_dw = (length + DOE_HEADER_SIZE as u32) >> 2;
+        let len_dw = length >> 2;
         let mut header = DoeHeader([0u8; DOE_HEADER_SIZE]);
         header.set_vendor_id(DOE_PCI_SIG_VENDOR_ID);
         header.set_data_object_type(data_object_type as u8);

@@ -187,7 +187,6 @@ impl MeasurementsResponse {
             chunk_buf[copied..copied + copy_len]
                 .copy_from_slice(&signature[sig_offset..sig_offset + copy_len]);
             copied += copy_len;
-            // rem_len -= copy_len;
         }
 
         Ok(copied)
@@ -467,8 +466,6 @@ pub(crate) async fn generate_measurements_response<'a>(
         Err(ctx.generate_error_response(rsp, ErrorCode::LargeResponse, handle, None))?
     } else {
         // If the response fits in a single message, prepare it directly
-        ctx.prepare_response_buffer(rsp)?;
-
         // Encode the response fixed fields
         rsp.put_data(rsp_len)
             .map_err(|e| (false, CommandError::Codec(e)))?;
