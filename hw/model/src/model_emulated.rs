@@ -7,13 +7,20 @@ use crate::InitParams;
 use crate::McuHwModel;
 use crate::Output;
 use anyhow::Result;
+use caliptra_api::SocManager;
+use caliptra_emu_bus::Bus;
+use caliptra_emu_bus::BusError;
+use caliptra_emu_bus::BusMmio;
 use caliptra_emu_bus::{Clock, Event};
 use caliptra_emu_cpu::{Cpu, CpuArgs, InstrTracer, Pic};
+use caliptra_emu_periph::SocToCaliptraBus;
 use caliptra_emu_periph::{
     ActionCb, CaliptraRootBus, CaliptraRootBusArgs, MailboxRequester, ReadyForFwCb, TbServicesCb,
 };
+use caliptra_emu_types::RvAddr;
+use caliptra_emu_types::RvData;
+use caliptra_emu_types::RvSize;
 use caliptra_hw_model::ModelError;
-use caliptra_hw_model_types::ErrorInjectionMode;
 use caliptra_image_types::IMAGE_MANIFEST_BYTE_SIZE;
 use emulator_periph::{I3c, I3cController, Mci, McuRootBus, McuRootBusArgs, Otp};
 use emulator_registers_generated::root_bus::AutoRootBus;
@@ -32,6 +39,7 @@ const DEFAULT_AXI_PAUSER: u32 = 0xaaaa_aaaa;
 /// Emulated model
 pub struct ModelEmulated {
     cpu: Cpu<BusLogger<AutoRootBus>>,
+    soc_to_caliptra_bus: SocToCaliptraBus,
     output: Output,
     caliptra_trace_fn: Option<Box<InstrTracer<'static>>>,
     ready_for_fw: Rc<Cell<bool>>,
@@ -124,9 +132,6 @@ impl McuHwModel for ModelEmulated {
             .soc_reg
             .set_hw_config((1 | if params.active_mode { 1 << 5 } else { 0 }).into());
 
-        let _soc_to_caliptra_bus =
-            root_bus.soc_to_caliptra_bus(MailboxRequester::SocUser(DEFAULT_AXI_PAUSER));
-
         let soc_to_caliptra_bus =
             root_bus.soc_to_caliptra_bus(MailboxRequester::SocUser(DEFAULT_AXI_PAUSER));
 
@@ -181,8 +186,11 @@ impl McuHwModel for ModelEmulated {
         }
 
         let (events_to_caliptra, events_from_caliptra) = cpu.register_events();
+        let soc_to_caliptra_bus =
+            root_bus.soc_to_caliptra_bus(MailboxRequester::SocUser(DEFAULT_AXI_PAUSER));
 
         let mut m = ModelEmulated {
+            soc_to_caliptra_bus,
             output,
             cpu,
             caliptra_trace_fn: None,
@@ -224,7 +232,7 @@ impl McuHwModel for ModelEmulated {
         &mut self.output
     }
 
-    fn cover_fw_mage(&mut self, fw_image: &[u8]) {
+    fn cover_fw_image(&mut self, fw_image: &[u8]) {
         let iccm_image = &fw_image[IMAGE_MANIFEST_BYTE_SIZE..];
         self.iccm_image_tag = Some(hash_slice(iccm_image));
     }
@@ -253,10 +261,6 @@ impl McuHwModel for ModelEmulated {
         }))
     }
 
-    fn ecc_error_injection(&mut self, _mode: ErrorInjectionMode) {
-        unimplemented!();
-    }
-
     fn set_axi_user(&mut self, _axi_user: u32) {
         unimplemented!();
     }
@@ -276,6 +280,54 @@ impl McuHwModel for ModelEmulated {
     fn save_otp_memory(&self, _path: &Path) -> Result<()> {
         unimplemented!()
     }
+
+    fn caliptra_soc_manager(&mut self) -> impl caliptra_api::SocManager {
+        self
+    }
+}
+
+impl ModelEmulated {
+    fn caliptra_apb_bus(&mut self) -> EmulatedApbBus<'_> {
+        EmulatedApbBus { model: self }
+    }
+}
+
+pub struct EmulatedApbBus<'a> {
+    model: &'a mut ModelEmulated,
+}
+
+impl Bus for EmulatedApbBus<'_> {
+    fn read(&mut self, size: RvSize, addr: RvAddr) -> Result<RvData, BusError> {
+        let result = self.model.soc_to_caliptra_bus.read(size, addr);
+        self.model.cpu.bus.log_read("SoC", size, addr, result);
+        result
+    }
+    fn write(&mut self, size: RvSize, addr: RvAddr, val: RvData) -> Result<(), BusError> {
+        let result = self.model.soc_to_caliptra_bus.write(size, addr, val);
+        self.model.cpu.bus.log_write("SoC", size, addr, val, result);
+        result
+    }
+}
+
+impl SocManager for &mut ModelEmulated {
+    type TMmio<'a>
+        = BusMmio<EmulatedApbBus<'a>>
+    where
+        Self: 'a;
+
+    fn delay(&mut self) {
+        self.step();
+    }
+
+    fn mmio_mut(&mut self) -> Self::TMmio<'_> {
+        BusMmio::new(self.caliptra_apb_bus())
+    }
+
+    const SOC_IFC_ADDR: u32 = 0x3003_0000;
+    const SOC_IFC_TRNG_ADDR: u32 = 0x3003_0000;
+    const SOC_MBOX_ADDR: u32 = 0x3002_0000;
+
+    const MAX_WAIT_CYCLES: u32 = 20_000_000;
 }
 
 #[cfg(test)]
