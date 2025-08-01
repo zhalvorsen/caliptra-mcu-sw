@@ -234,11 +234,11 @@ async fn process_get_capabilities<'a>(
     ctx.reset_transcript_via_req_code(ReqRespCode::GetCapabilities);
 
     // Set the SPDM version in the transcript manager
-    ctx.transcript_mgr
+    ctx.shared_transcript
         .set_spdm_version(ctx.state.connection_info.version_number());
 
     // Append GET_CAPABILITIES to the transcript VCA context
-    ctx.append_message_to_transcript(req_payload, TranscriptContext::Vca)
+    ctx.append_message_to_transcript(req_payload, TranscriptContext::Vca, None)
         .await
 }
 
@@ -278,7 +278,7 @@ async fn generate_capabilities_response<'a>(
     }
 
     // Append CAPABILITIES to the transcript VCA context
-    ctx.append_message_to_transcript(rsp_buf, TranscriptContext::Vca)
+    ctx.append_message_to_transcript(rsp_buf, TranscriptContext::Vca, None)
         .await?;
 
     rsp_buf
