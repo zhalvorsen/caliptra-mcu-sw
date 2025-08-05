@@ -1380,88 +1380,23 @@ impl Drop for ModelFpgaRealtime {
 #[cfg(test)]
 mod test {
     use crate::{DefaultHwModel, InitParams, McuHwModel};
+    use mcu_builder::FirmwareBinaries;
+    use mcu_rom_common::McuRomBootStatus;
 
-    #[ignore]
     #[test]
     fn test_new_unbooted() {
-        let mcu_rom = mcu_builder::rom_build(Some("fpga"), "").expect("Could not build MCU ROM");
-        let mcu_runtime = &mcu_builder::runtime_build_with_apps_cached(
-            &[],
-            Some("fpga-runtime.bin"),
-            false,
-            Some("fpga"),
-            Some(&mcu_config_fpga::FPGA_MEMORY_MAP),
-            false,
-            None,
-            None,
-            None,
-        )
-        .expect("Could not build MCU runtime");
-        let mut caliptra_builder = mcu_builder::CaliptraBuilder::new(
-            true,
-            None,
-            None,
-            None,
-            None,
-            Some(mcu_runtime.into()),
-            None,
-            None,
-        );
-        let caliptra_rom = caliptra_builder
-            .get_caliptra_rom()
-            .expect("Could not build Caliptra ROM");
-        let caliptra_fw = caliptra_builder
-            .get_caliptra_fw()
-            .expect("Could not build Caliptra FW bundle");
-        let vendor_pk_hash = caliptra_builder
-            .get_vendor_pk_hash()
-            .expect("Could not get vendor PK hash");
-        println!("Vendor PK hash: {:x?}", vendor_pk_hash);
-        let vendor_pk_hash = hex::decode(vendor_pk_hash).unwrap().try_into().unwrap();
-        let soc_manifest = caliptra_builder
-            .get_soc_manifest()
-            .expect("Could not get SOC manifest");
-        use tock_registers::interfaces::Readable;
-
-        let caliptra_rom = std::fs::read(caliptra_rom).unwrap();
-        let caliptra_fw = std::fs::read(caliptra_fw).unwrap();
-        let mcu_rom = std::fs::read(mcu_rom).unwrap();
-        let mcu_runtime = std::fs::read(mcu_runtime).unwrap();
-        let soc_manifest = std::fs::read(soc_manifest).unwrap();
-
+        let firmware_bundle = FirmwareBinaries::from_env().unwrap();
         let mut model = DefaultHwModel::new_unbooted(InitParams {
-            caliptra_rom: &caliptra_rom,
-            caliptra_firmware: &caliptra_fw,
-            mcu_rom: &mcu_rom,
-            mcu_firmware: &mcu_runtime,
-            soc_manifest: &soc_manifest,
+            caliptra_rom: &firmware_bundle.caliptra_rom,
+            caliptra_firmware: &firmware_bundle.caliptra_fw,
+            mcu_rom: &firmware_bundle.mcu_rom,
+            mcu_firmware: &firmware_bundle.mcu_runtime,
+            soc_manifest: &firmware_bundle.soc_manifest,
             active_mode: true,
-            vendor_pk_hash: Some(vendor_pk_hash),
             ..Default::default()
         })
         .unwrap();
-        println!("Waiting on I3C target to be configured");
-        let mut xi3c_configured = false;
-        for _ in 0..2_000_000 {
-            model.step();
-            if !xi3c_configured && model.i3c_target_configured() {
-                xi3c_configured = true;
-                println!("I3C target configured");
-                model.configure_i3c_controller();
-                println!("Starting recovery flow (BMC)");
-                println!(
-                    "Mode {}",
-                    if (model.caliptra_mmio.soc().cptra_hw_config.get() >> 5) & 1 == 1 {
-                        "subsystem"
-                    } else {
-                        "passive"
-                    }
-                );
 
-                model.start_recovery_bmc();
-            }
-        }
-
-        println!("Ending");
+        model.step_until(|m| m.mci_flow_status() == u32::from(McuRomBootStatus::I3cInitialized));
     }
 }
