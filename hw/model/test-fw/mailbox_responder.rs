@@ -20,6 +20,15 @@ fn run() -> ! {
     mci.registers
         .intr_block_rf_notif0_intr_en_r
         .modify(mci::bits::Notif0IntrEnT::NotifMbox0CmdAvailEn::SET);
+    let count_r = &mci
+        .registers
+        .intr_block_rf_notif_mbox0_cmd_avail_intr_count_r;
+
+    romtime::println!("Initial mbox_cmd_count {}", count_r.get());
+
+    // Try setting MRAC to 0xffff_ffff
+    // Check interrupt count soc.mci_top.mci_reg.intr_block_rf.notif_mbox0_cmd_avail_intr_count_r
+    // Try from a different AXI user
 
     mci.caliptra_boot_go();
 
@@ -31,10 +40,17 @@ fn run() -> ! {
     mci.set_flow_milestone(McuBootMilestones::COLD_BOOT_FLOW_COMPLETE.into());
 
     loop {
+        romtime::println!("Begin loop mbox_cmd_count {}", count_r.get());
         let status = &mci.registers.mcu_mbox0_csr_mbox_cmd_status;
         let notif0 = &mci.registers.intr_block_rf_notif0_internal_intr_r;
+        let mut count = 0;
         while notif0.read(mci::bits::Notif0IntrT::NotifMbox0CmdAvailSts) == 0 {
             // Wait for a request from the SoC.
+            if count % 5_000 == 0 {
+                romtime::println!("Waiting for mailbox request...");
+                romtime::println!("    mbox_cmd_count {}", count_r.get());
+            }
+            count += 1;
         }
         notif0.modify(mci::bits::Notif0IntrT::NotifMbox0CmdAvailSts::SET);
         let cmd = mci.registers.mcu_mbox0_csr_mbox_cmd.get();
@@ -57,6 +73,10 @@ fn run() -> ! {
                     sram[i + 1].set(buf[i]);
                 }
                 status.write(mci::bits::MboxCmdStatus::Status::DataReady);
+            }
+            // Returns a success response
+            0x2000_0000 => {
+                status.write(mci::bits::MboxCmdStatus::Status::CmdComplete);
             }
             // Everything else returns a failure response; doesn't consume input.
             _ => {

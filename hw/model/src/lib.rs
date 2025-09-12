@@ -487,6 +487,7 @@ pub trait McuHwModel {
             mbox.mbox_execute().write(|w| w.execute(true));
         });
 
+        println!("Before mbox_cmd_count {}", self.mcu_manager().mci().intr_block_rf().notif_mbox0_cmd_avail_intr_count_r().read());
         // The hardware does not send the interrupt because it thinks MCU controls the mailbox. We
         // need to manually trigger it.
         self.mcu_manager().with_mci(|mci| {
@@ -494,6 +495,7 @@ pub trait McuHwModel {
                 .notif0_intr_trig_r()
                 .write(|w| w.notif_mbox0_cmd_avail_trig(true));
         });
+        println!("After mbox_cmd_count {}", self.mcu_manager().mci().intr_block_rf().notif_mbox0_cmd_avail_intr_count_r().read());
 
         Ok(())
     }
@@ -512,6 +514,11 @@ pub trait McuHwModel {
             timeout_cycles -= 1;
             if timeout_cycles == 0 {
                 bail!("Mailbox command timed out");
+            }
+            // Wait for a request from the SoC.
+            if timeout_cycles % 50_000 == 0 {
+                println!("Waiting for mailbox response...");
+                println!("    mbox_cmd_count {}", self.mcu_manager().mci().intr_block_rf().notif_mbox0_cmd_avail_intr_count_r().read());
             }
         }
 
@@ -658,6 +665,9 @@ mod tests {
         )
         .unwrap();
         let message: [u8; 10] = [0x90, 0x5e, 0x1f, 0xad, 0x8b, 0x60, 0xb0, 0xbf, 0x1c, 0x7e];
+
+        // Send command that returns success with no output
+        assert_eq!(model.mailbox_execute(0x2000_0000, &[]).unwrap(), None);
 
         // Send command that echoes the command and input message
         assert_eq!(
