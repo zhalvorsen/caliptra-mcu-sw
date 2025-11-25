@@ -232,32 +232,7 @@ impl BootFlow for ColdBoot {
 
         romtime::println!("[mcu-rom] Writing fuses to Caliptra");
 
-        romtime::println!(
-            "[mcu-rom] Setting Caliptra mailbox user 0 to {}",
-            HexWord(straps.axi_user0)
-        );
-        soc.set_cptra_mbox_valid_axi_user(0, straps.axi_user0);
-        romtime::println!("[mcu-rom] Locking Caliptra mailbox user 0");
-        soc.set_cptra_mbox_axi_user_lock(0, 1);
-
-        romtime::println!(
-            "[mcu-rom] Setting Caliptra mailbox user 1 to {}",
-            HexWord(straps.axi_user1)
-        );
-        soc.set_cptra_mbox_valid_axi_user(1, straps.axi_user1);
-        romtime::println!("[mcu-rom] Locking Caliptra mailbox user 1");
-        soc.set_cptra_mbox_axi_user_lock(1, 1);
-
-        romtime::println!("[mcu-rom] Setting fuse user");
-        soc.set_cptra_fuse_valid_axi_user(straps.axi_user0);
-        romtime::println!("[mcu-rom] Locking fuse user");
-        soc.set_cptra_fuse_axi_user_lock(1);
-        romtime::println!("[mcu-rom] Setting TRNG user");
-        soc.set_cptra_trng_valid_axi_user(straps.axi_user0);
-        romtime::println!("[mcu-rom] Locking TRNG user");
-        soc.set_cptra_trng_axi_user_lock(1);
-        romtime::println!("[mcu-rom] Setting DMA user");
-        soc.set_ss_caliptra_dma_axi_user(straps.axi_user0);
+        soc.set_axi_users(straps.into());
         mci.set_flow_checkpoint(McuRomBootStatus::AxiUsersConfigured.into());
 
         romtime::println!("[mcu-rom] Populating fuses");
