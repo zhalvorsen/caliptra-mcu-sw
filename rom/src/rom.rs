@@ -564,7 +564,7 @@ pub struct AxiUsers {
     pub dma_user: u32,
 }
 
-impl<'a> From<&McuStraps> for AxiUsers {
+impl From<&McuStraps> for AxiUsers {
     fn from(straps: &McuStraps) -> Self {
         AxiUsers {
             mbox_users: [
