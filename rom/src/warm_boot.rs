@@ -18,7 +18,7 @@ use crate::{
     fatal_error, BootFlow, McuBootMilestones, McuRomBootStatus, RomEnv, RomParameters,
     MCU_MEMORY_MAP,
 };
-use core::fmt::Write;
+use core::{fmt::Write, ops::Deref};
 use mcu_error::McuError;
 
 pub struct WarmBoot {}
@@ -32,7 +32,7 @@ impl BootFlow for WarmBoot {
         // Create local references to minimize code changes
         let mci = &env.mci;
         let soc = &env.soc;
-        let straps = &env.straps;
+        let straps = env.straps.deref();
 
         romtime::println!("[mcu-rom] Setting Caliptra boot go");
         mci.caliptra_boot_go();

@@ -21,6 +21,7 @@ use caliptra_api::CaliptraApiError;
 use caliptra_api::SocManager;
 use caliptra_drivers::okref;
 use core::fmt::Write;
+use core::ops::Deref;
 use mcu_error::McuError;
 use romtime::{CaliptraSoC, HexWord};
 use tock_registers::interfaces::Readable;
@@ -136,7 +137,7 @@ impl BootFlow for ColdBoot {
         let i3c = &mut env.i3c;
         let i3c_base = env.i3c_base;
         let soc_manager = &mut env.soc_manager;
-        let straps = &env.straps;
+        let straps = env.straps.deref();
 
         romtime::println!("[mcu-rom] Setting Caliptra boot go");
         mci.caliptra_boot_go();
