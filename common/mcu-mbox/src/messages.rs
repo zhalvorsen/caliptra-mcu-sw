@@ -151,6 +151,7 @@ impl CommandId {
     pub const MC_GET_DPE_CERTIFICATE_CHAIN: Self = Self(0x4D44_4343); // "MDCC"
 
     // OCP Lock commands
+    pub const MC_OCP_LOCK: Self = Self(0x0000_0013);
     pub const MC_OCP_LOCK_ROTATE_HEK: Self = Self(0x4F4C_5248); // "OLRH"
     pub const MC_OCP_LOCK_SET_PERMA_HEK: Self = Self(0x4F4C_5350); // "OLSP"
     pub const MC_GET_OCP_LOCK_ENDORSEMENT_CERT: Self = Self(0x4F4C_4543); // "OLEC"
@@ -485,8 +486,8 @@ impl McuMailboxReq {
             McuMailboxReq::GetDpeCertChain(_) => CommandId::MC_GET_DPE_CERTIFICATE_CHAIN,
             McuMailboxReq::GetAttestation(_) => CommandId::MC_GET_ATTESTATION,
 
-            McuMailboxReq::OcpLockSetPermaHek(_) => CommandId::MC_OCP_LOCK_SET_PERMA_HEK,
-            McuMailboxReq::OcpLockRotateHek(_) => CommandId::MC_OCP_LOCK_ROTATE_HEK,
+            McuMailboxReq::OcpLockSetPermaHek(_) => CommandId::MC_OCP_LOCK,
+            McuMailboxReq::OcpLockRotateHek(_) => CommandId::MC_OCP_LOCK,
             McuMailboxReq::GetOcpLockEndorsementCert(_) => {
                 CommandId::MC_GET_OCP_LOCK_ENDORSEMENT_CERT
             }
@@ -1988,13 +1989,23 @@ impl Response for ProvisionVendorPkHashResp {}
 
 /// MC_OCP_LOCK_SET_PERMA_HEK request: Set the Permanent HEK state.
 #[repr(C)]
-#[derive(Debug, Default, IntoBytes, FromBytes, KnownLayout, Immutable, PartialEq, Eq)]
+#[derive(Debug, IntoBytes, FromBytes, KnownLayout, Immutable, PartialEq, Eq)]
 pub struct OcpLockSetPermaHekReq {
     pub hdr: MailboxReqHeader,
+    pub subcommand: u32,
+}
+
+impl Default for OcpLockSetPermaHekReq {
+    fn default() -> Self {
+        Self {
+            hdr: MailboxReqHeader::default(),
+            subcommand: CommandId::MC_OCP_LOCK_SET_PERMA_HEK.0,
+        }
+    }
 }
 
 impl Request for OcpLockSetPermaHekReq {
-    const ID: CommandId = CommandId::MC_OCP_LOCK_SET_PERMA_HEK;
+    const ID: CommandId = CommandId::MC_OCP_LOCK;
     type Resp = OcpLockSetPermaHekResp;
 }
 
@@ -2008,14 +2019,25 @@ pub struct OcpLockSetPermaHekResp {
 impl Response for OcpLockSetPermaHekResp {}
 /// MC_OCP_LOCK_ROTATE_HEK request: Rotate the active HEK.
 #[repr(C)]
-#[derive(Debug, Default, IntoBytes, FromBytes, KnownLayout, Immutable, PartialEq, Eq)]
+#[derive(Debug, IntoBytes, FromBytes, KnownLayout, Immutable, PartialEq, Eq)]
 pub struct OcpLockRotateHekReq {
     pub hdr: MailboxReqHeader,
+    pub subcommand: u32,
     pub hek_slot: u32,
 }
 
+impl Default for OcpLockRotateHekReq {
+    fn default() -> Self {
+        Self {
+            hdr: MailboxReqHeader::default(),
+            subcommand: CommandId::MC_OCP_LOCK_ROTATE_HEK.0,
+            hek_slot: 0,
+        }
+    }
+}
+
 impl Request for OcpLockRotateHekReq {
-    const ID: CommandId = CommandId::MC_OCP_LOCK_ROTATE_HEK;
+    const ID: CommandId = CommandId::MC_OCP_LOCK;
     type Resp = OcpLockRotateHekResp;
 }
 
@@ -2682,8 +2704,19 @@ mod tests {
 
     #[test]
     fn test_ocp_lock_command_ids() {
+        assert_eq!(CommandId::MC_OCP_LOCK.0, 0x13);
         assert_eq!(CommandId::MC_OCP_LOCK_ROTATE_HEK.0, 0x4F4C_5248); // "OLRH"
         assert_eq!(CommandId::MC_OCP_LOCK_SET_PERMA_HEK.0, 0x4F4C_5350); // "OLSP"
+        assert_eq!(OcpLockRotateHekReq::ID, CommandId::MC_OCP_LOCK);
+        assert_eq!(OcpLockSetPermaHekReq::ID, CommandId::MC_OCP_LOCK);
+        assert_eq!(
+            OcpLockRotateHekReq::default().subcommand,
+            CommandId::MC_OCP_LOCK_ROTATE_HEK.0
+        );
+        assert_eq!(
+            OcpLockSetPermaHekReq::default().subcommand,
+            CommandId::MC_OCP_LOCK_SET_PERMA_HEK.0
+        );
     }
 
     #[test]
