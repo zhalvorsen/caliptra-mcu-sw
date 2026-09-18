@@ -135,10 +135,11 @@ Payload semantics match [Caliptra SPDM VDM DOT commands](caliptra_spdm_vdm_cmds.
 
 All MCU Runtime OCP LOCK requests use MCI command register value `0x00000013`.
 Mailbox SRAM begins with the normal checksum followed by a little-endian OCP LOCK
-FourCC, its payload, and the authorization trailer.
+FourCC, its payload, and (for authorized operations) the authorization trailer.
 
 ```text
 Authorized: checksum || OCP_LOCK_FourCC || OCP_LOCK_payload || authorization_trailer
+Native:     checksum || OCP_LOCK_FourCC || OCP_LOCK_payload
 ```
 
 For authorized OCP LOCK commands the signed preimage is
@@ -148,6 +149,9 @@ For authorized OCP LOCK commands the signed preimage is
 | ------ | ------- | -------------- |
 | `OLRH` | Rotate HEK | Authorized |
 | `OLSP` | Set Perma HEK | Authorized |
+| `OLEC` | Get Endorsement Cert | Native/read-only |
+| `OLEH` | Enumerate HPKE Handles | Native/read-only |
+| `OLER` | Get Epoch Key Report | Native/read-only |
 
 Payload semantics match [Caliptra SPDM VDM OCP LOCK commands](caliptra_spdm_vdm_cmds.md#ocp-lock-commands).
 
